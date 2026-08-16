@@ -166,10 +166,11 @@
   .chip{font-size:11.5px; padding:6px 12px; border-radius:20px; background:var(--slate-pale); color:var(--slate); cursor:pointer; border:1px solid var(--line);}
 
   .checklist{border:1px solid var(--line); border-radius:9px; max-height:280px; overflow-y:auto; margin-bottom:14px;}
-  .checklist-row{display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px dashed var(--line); font-size:13px;}
+  .checklist-row{display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-bottom:1px dashed var(--line); font-size:13px; flex-wrap:wrap;}
   .checklist-row:last-child{border-bottom:none;}
-  .checklist-row input[type=checkbox]{width:18px; height:18px; flex:0 0 auto;}
-  .checklist-row .meta{color:var(--ink-soft); font-size:11.5px; font-family:'IBM Plex Mono',monospace;}
+  .checklist-row input[type=checkbox]{width:18px; height:18px; flex:0 0 auto; margin-top:2px;}
+  .checklist-row > span:first-of-type{flex:1; min-width:180px;}
+  .checklist-row .meta{display:block; width:100%; padding-left:28px; color:var(--ink-soft); font-size:11.5px; font-family:'IBM Plex Mono',monospace;}
 
   .theme-toggle{display:flex; gap:8px;}
   .theme-btn{flex:1; text-align:center; padding:12px; border-radius:9px; border:1.5px solid var(--line); cursor:pointer; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px; background:var(--bg); color:var(--ink-soft);}
@@ -1011,8 +1012,8 @@ function renderBodegaChecklist(){
     const dias = diasEntre(b.fechaIngreso, todayISO());
     return `<label class="checklist-row">
       <input type="checkbox" value="${b.id}" ${seleccionados.includes(b.id)?'checked':''} onchange="updateEntCostoPreview()">
-      <span>${escapeHtml(b.cliente)} — ${b.bultos} bulto${b.bultos===1?'':'s'}</span>
-      <span class="meta">${b.codigo} · ${dias}d</span>
+      <span>${escapeHtml(b.cliente)} — ${b.bultos} bulto${b.bultos===1?'':'s'}${b.descripcion?' · '+escapeHtml(b.descripcion):''}</span>
+      <span class="meta">${b.codigo} · GD ${b.gd||'—'} · OC ${b.oc||'—'} · ${dias}d</span>
     </label>`;
   }).join('');
   updateEntCostoPreview();
