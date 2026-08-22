@@ -16,6 +16,7 @@
     --slate:#6B6F76; --slate-pale:#E7E7EA;
     --plum:#7A5C8A; --plum-pale:#ECE3EF;
     --blue2:#3A6E96; --blue2-pale:#DCE7F2;
+    --success:#127F72; --success-pale:#DBEFEB;
     --red:#B0402F; --red-pale:#F5E2DE;
     --line:#DCD6C7;
   }
@@ -27,12 +28,13 @@
     --slate:#A2A6AC; --slate-pale:#292D30;
     --plum:#BC9FCB; --plum-pale:#2C2433;
     --blue2:#7BAAD6; --blue2-pale:#1E2E3C;
+    --success:#4FD1BE; --success-pale:#173832;
     --red:#E08972; --red-pale:#3A2521;
     --line:#33393B;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html{-webkit-text-size-adjust:100%;}
-  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; font-size:15px; transition:background .2s,color .2s;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; font-size:15px; transition:background .2s,color .2s; overflow-x:hidden;}
   .app{max-width:1080px; margin:0 auto; padding:18px 14px 90px;}
   @media(min-width:700px){ .app{padding:28px 20px 90px;} }
 
@@ -116,7 +118,7 @@
   .label-card.entrega{border-left-color:var(--blue2);}
   .label-card.entrega.estado-agendada{border-left-color:var(--blue2);}
   .label-card.entrega.estado-despachada{border-left-color:var(--plum);}
-  .label-card.entrega.estado-entregada{border-left-color:var(--green-deep);}
+  .label-card.entrega.estado-entregada{border-left-color:var(--success);}
   .label-card.entrega.estado-reagendada{border-left-color:var(--amber);}
   .label-card.entrega.estado-cancelada{border-left-color:var(--red);}
   .label-card.entrega.atrasada{border-left-color:var(--red);}
@@ -133,20 +135,20 @@
   .badge.otro{background:var(--slate-pale); color:var(--slate);}
   .badge.pendiente{background:var(--amber-pale); color:var(--amber);}
   .badge.proceso{background:var(--blue2-pale); color:var(--blue2);}
-  .badge.completo{background:var(--green-pale); color:var(--green-deep);}
+  .badge.completo{background:var(--success-pale); color:var(--success);}
   .badge.agendada{background:var(--blue2-pale); color:var(--blue2);}
   .badge.despachada{background:var(--plum-pale); color:var(--plum);}
-  .badge.entregada{background:var(--green-pale); color:var(--green-deep);}
+  .badge.entregada{background:var(--success-pale); color:var(--success);}
   .badge.reagendada{background:var(--amber-pale); color:var(--amber);}
   .badge.atrasada{background:var(--red-pale); color:var(--red);}
   .badge.cancelada{background:var(--red-pale); color:var(--red);}
   .badge.en-bodega{background:var(--plum-pale); color:var(--plum);}
-  .badge.retirado{background:var(--green-pale); color:var(--green-deep);}
+  .badge.retirado{background:var(--success-pale); color:var(--success);}
 
   .label-meta{margin-top:9px; display:flex; gap:6px; flex-wrap:wrap;}
-  .meta-chip{display:inline-flex; align-items:baseline; gap:5px; background:var(--bg); border-radius:6px; padding:4px 9px;}
-  .meta-chip .k{font-family:'Space Grotesk',sans-serif; font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap;}
-  .meta-chip .v{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--ink); white-space:nowrap;}
+  .meta-chip{display:inline-flex; align-items:baseline; gap:5px; background:var(--bg); border-radius:6px; padding:4px 9px; max-width:100%;}
+  .meta-chip .k{font-family:'Space Grotesk',sans-serif; font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap; flex:0 0 auto;}
+  .meta-chip .v{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--ink); white-space:normal; overflow-wrap:anywhere; word-break:break-word;}
   .meta-chip .v.muted{color:var(--ink-soft); font-weight:500;}
   .label-costos{display:flex; gap:16px; margin-top:10px; font-size:12.5px; flex-wrap:wrap;}
   .label-costos b{color:var(--ink);}
@@ -420,8 +422,14 @@
     <!-- COSTOS -->
     <div class="panel" id="panel-costos">
       <div class="lock-note">🔒 Uso interno: pagos a Felipe y SAN-ORGANIC calculados por tramo de bultos entregados. No se incluye en el reporte para el gerente de SANPEX.</div>
-      <div class="card"><h2>Totales mensuales</h2><p class="sub">Según bultos totales de cada Entrega.</p><div class="table-scroll" id="costosMensuales"></div></div>
-      <div class="card"><h2>Detalle por entrega</h2><div class="table-scroll" id="costosDetalle"></div></div>
+      <div class="card"><h2>Totales mensuales</h2><p class="sub">Según bultos totales de cada Entrega, ordenado cronológicamente.</p><div class="table-scroll" id="costosMensuales"></div></div>
+      <div class="card">
+        <h2>Detalle por entrega</h2>
+        <div class="filters">
+          <select id="filtroCostosMes"><option value="">Todos los meses</option></select>
+        </div>
+        <div class="table-scroll" id="costosDetalle"></div>
+      </div>
     </div>
 
     <!-- INSUMOS -->
@@ -1310,20 +1318,31 @@ function renderResumen(){
 function renderCostos(){
   const porMes = {};
   entregas.forEach(e=>{
-    if(!porMes[e.mes]) porMes[e.mes]={count:0, felipe:0, san:0};
+    if(!porMes[e.mes]) porMes[e.mes]={count:0, felipe:0, san:0, sortKey:e.fechaAgendamiento.slice(0,7)};
     porMes[e.mes].count++; porMes[e.mes].felipe+=e.costoFelipe; porMes[e.mes].san+=e.costoSanOrganic;
   });
-  const meses = Object.keys(porMes);
+  const meses = Object.keys(porMes).sort((a,b)=> porMes[a].sortKey.localeCompare(porMes[b].sortKey));
   document.getElementById('costosMensuales').innerHTML = meses.length ? `
     <table class="simple"><thead><tr><th>Mes</th><th>Entregas</th><th>Felipe</th><th>SAN-ORGANIC</th><th>Total</th></tr></thead>
     <tbody>${meses.map(m=>{const d=porMes[m]; return `<tr><td>${cap(m)}</td><td>${d.count}</td><td>${clp(d.felipe)}</td><td>${clp(d.san)}</td><td><b>${clp(d.felipe+d.san)}</b></td></tr>`;}).join('')}</tbody></table>
   ` : '<div class="empty">Aún no hay entregas registradas.</div>';
 
-  document.getElementById('costosDetalle').innerHTML = entregas.length ? `
-    <table class="simple"><thead><tr><th>Cliente(s)</th><th>Mes</th><th>Bultos</th><th>Felipe</th><th>SAN-ORGANIC</th><th>Total</th></tr></thead>
-    <tbody>${entregas.map(e=>`<tr><td>${escapeHtml(clientesDeEntrega(e))}</td><td>${cap(e.mes)}</td><td>${e.bultosTotal}</td><td>${clp(e.costoFelipe)}</td><td>${clp(e.costoSanOrganic)}</td><td><b>${clp(e.costoFelipe+e.costoSanOrganic)}</b></td></tr>`).join('')}</tbody></table>
-  ` : '<div class="empty">Aún no hay entregas registradas.</div>';
+  const selMes = document.getElementById('filtroCostosMes');
+  const prevVal = selMes.value;
+  selMes.innerHTML = '<option value="">Todos los meses</option>' + meses.map(m=>`<option value="${m}">${cap(m)}</option>`).join('');
+  selMes.value = meses.includes(prevVal) ? prevVal : '';
+
+  const filtroMes = selMes.value;
+  const detalleOrdenado = entregas
+    .filter(e=> !filtroMes || e.mes===filtroMes)
+    .sort((a,b)=> (a.fechaAgendamiento+a.horaAgendamiento).localeCompare(b.fechaAgendamiento+b.horaAgendamiento));
+
+  document.getElementById('costosDetalle').innerHTML = detalleOrdenado.length ? `
+    <table class="simple"><thead><tr><th>Fecha</th><th>Cliente(s)</th><th>Mes</th><th>Bultos</th><th>Felipe</th><th>SAN-ORGANIC</th><th>Total</th></tr></thead>
+    <tbody>${detalleOrdenado.map(e=>`<tr><td>${e.fechaAgendamiento}</td><td>${escapeHtml(clientesDeEntrega(e))}</td><td>${cap(e.mes)}</td><td>${e.bultosTotal}</td><td>${clp(e.costoFelipe)}</td><td>${clp(e.costoSanOrganic)}</td><td><b>${clp(e.costoFelipe+e.costoSanOrganic)}</b></td></tr>`).join('')}</tbody></table>
+  ` : '<div class="empty">No hay entregas para ese mes.</div>';
 }
+document.getElementById('filtroCostosMes').addEventListener('change', renderCostos);
 
 /* ---------------- insumos ---------------- */
 function stockDe(insumoId){ return movimientos.filter(m=>m.insumoId===insumoId).reduce((s,m)=> s + (m.tipo==='compra'? m.cantidad : -m.cantidad), 0); }
