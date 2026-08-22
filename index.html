@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F6F4EE; --surface:#FFFFFF; --ink:#1B211D; --ink-soft:#5C665F;
+    --bg:#EAE4D5; --surface:#FFFFFF; --ink:#1B211D; --ink-soft:#5C665F;
     --green-deep:#2F5D8A; --green-mid:#3B72A0; --green-pale:#E1EAF2;
     --amber:#C97B1F; --amber-pale:#F7E9D3;
     --sage:#5F7A67; --sage-pale:#E4EBE4;
@@ -59,7 +59,7 @@
   .panel{display:none;} .panel.active{display:block;}
   .subpanel{display:none;} .subpanel.active{display:block;}
 
-  .card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px;}
+  .card{background:var(--surface); border:none; box-shadow:0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.05); border-radius:12px; padding:16px; margin-bottom:14px;}
   @media(min-width:700px){ .card{padding:20px;} }
   .card h2{font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0 0 4px; font-weight:600;}
   .card .sub{font-size:12px; color:var(--ink-soft); margin:0 0 14px; line-height:1.5;}
@@ -108,12 +108,22 @@
   .filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
   .filters select, .filters input{width:auto; min-width:130px; flex:1;}
 
-  .label-card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px; position:relative; border-left:5px solid var(--green-mid);}
+  .label-card{background:var(--surface); border:none; box-shadow:0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.05); border-radius:10px; padding:14px 16px; margin-bottom:10px; position:relative; border-left:5px solid var(--green-mid);}
   .label-card.blue{border-left-color:var(--amber);}
   .label-card.prov{border-left-color:var(--sage);}
   .label-card.otro{border-left-color:var(--slate);}
   .label-card.bodega{border-left-color:var(--plum);}
   .label-card.entrega{border-left-color:var(--blue2);}
+  .label-card.entrega.estado-agendada{border-left-color:var(--blue2);}
+  .label-card.entrega.estado-despachada{border-left-color:var(--plum);}
+  .label-card.entrega.estado-entregada{border-left-color:var(--green-deep);}
+  .label-card.entrega.estado-reagendada{border-left-color:var(--amber);}
+  .label-card.entrega.estado-cancelada{border-left-color:var(--red);}
+  .label-card.entrega.atrasada{border-left-color:var(--red);}
+
+  .date-group{margin-bottom:20px;}
+  .date-group-header{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:2px 4px 9px;}
+  .date-group-count{font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:11px; color:var(--ink-soft); text-transform:none; letter-spacing:0; white-space:nowrap;}
   .label-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;}
   .label-cliente{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
   .codigo-tag{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--plum); font-weight:600;}
@@ -125,13 +135,19 @@
   .badge.proceso{background:var(--blue2-pale); color:var(--blue2);}
   .badge.completo{background:var(--green-pale); color:var(--green-deep);}
   .badge.agendada{background:var(--blue2-pale); color:var(--blue2);}
+  .badge.despachada{background:var(--plum-pale); color:var(--plum);}
   .badge.entregada{background:var(--green-pale); color:var(--green-deep);}
   .badge.reagendada{background:var(--amber-pale); color:var(--amber);}
+  .badge.atrasada{background:var(--red-pale); color:var(--red);}
   .badge.cancelada{background:var(--red-pale); color:var(--red);}
   .badge.en-bodega{background:var(--plum-pale); color:var(--plum);}
   .badge.retirado{background:var(--green-pale); color:var(--green-deep);}
 
-  .label-meta{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--ink-soft); margin-top:8px; display:flex; gap:14px; flex-wrap:wrap;}
+  .label-meta{margin-top:9px; display:flex; gap:6px; flex-wrap:wrap;}
+  .meta-chip{display:inline-flex; align-items:baseline; gap:5px; background:var(--bg); border-radius:6px; padding:4px 9px;}
+  .meta-chip .k{font-family:'Space Grotesk',sans-serif; font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap;}
+  .meta-chip .v{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--ink); white-space:nowrap;}
+  .meta-chip .v.muted{color:var(--ink-soft); font-weight:500;}
   .label-costos{display:flex; gap:16px; margin-top:10px; font-size:12.5px; flex-wrap:wrap;}
   .label-costos b{color:var(--ink);}
   .label-notas{margin-top:8px; font-size:12.5px; color:var(--ink-soft); font-style:italic;}
@@ -176,13 +192,14 @@
   .theme-btn{flex:1; text-align:center; padding:12px; border-radius:9px; border:1.5px solid var(--line); cursor:pointer; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px; background:var(--bg); color:var(--ink-soft);}
   .theme-btn.active{border-color:var(--green-deep); background:var(--green-pale); color:var(--green-deep);}
 
-  details.month-group{margin-bottom:10px; border:1px solid var(--line); border-radius:10px; overflow:hidden;}
-  details.month-group summary{cursor:pointer; padding:12px 14px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px; background:var(--surface); list-style:none;}
+  details.month-group{margin-bottom:10px; border:none; box-shadow:0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.05); border-radius:10px; overflow:hidden;}
+  details.month-group summary{cursor:pointer; padding:12px 14px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); background:var(--surface); list-style:none; display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
   details.month-group summary::-webkit-details-marker{display:none;}
-  details.month-group summary::before{content:"▸ "; color:var(--ink-soft);}
-  details.month-group[open] summary::before{content:"▾ ";}
-  details.month-group .month-body{padding:10px 12px 4px;}
-  .section-title{font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; margin:18px 0 8px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em;}
+  details.month-group summary .mes-nombre::before{content:"▸ "; color:var(--ink-soft);}
+  details.month-group[open] summary .mes-nombre::before{content:"▾ ";}
+  details.month-group .month-body{padding:10px 12px 4px; background:var(--bg);}
+  .section-title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin:18px 2px 9px; display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .section-title .date-group-count{text-transform:none;}
   .warn-dias{color:var(--red); font-weight:600;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -332,10 +349,10 @@
           <input type="text" id="filtroBodTexto" placeholder="Buscar cliente...">
         </div>
 
-        <div class="section-title">En bodega actualmente</div>
+        <div class="section-title"><span>En bodega actualmente</span><span class="date-group-count" id="tituloBodegaActivaCount"></span></div>
         <div id="listaBodegaActiva"></div>
 
-        <div class="section-title">Historial por mes</div>
+        <div class="section-title"><span>Historial por mes</span></div>
         <div id="listaBodegaHistorial"></div>
       </div>
     </div>
@@ -378,7 +395,7 @@
           </div>
           <div class="grid2">
             <div class="field"><label>Estado</label>
-              <select id="entEstado"><option value="agendada">Agendada</option><option value="entregada">Entregada</option><option value="reagendada">Reagendada</option><option value="cancelada">Cancelada</option></select>
+              <select id="entEstado"><option value="agendada">Agendada</option><option value="despachada">Despachada</option><option value="entregada">Entregada</option><option value="reagendada">Reagendada</option><option value="cancelada">Cancelada</option></select>
             </div>
             <div class="field"><label>Costos internos calculados</label>
               <div id="entCostoPreview" style="font-family:'IBM Plex Mono',monospace; font-size:12px; padding:10px 11px; background:var(--green-pale); border-radius:8px; color:var(--green-deep);">—</div>
@@ -393,7 +410,7 @@
 
       <div class="subpanel" id="sub-ent-lista">
         <div class="filters">
-          <select id="filtroEntEstado"><option value="">Todos los estados</option><option value="agendada">Agendada</option><option value="entregada">Entregada</option><option value="reagendada">Reagendada</option><option value="cancelada">Cancelada</option></select>
+          <select id="filtroEntEstado"><option value="">Todos los estados</option><option value="agendada">Agendada</option><option value="despachada">Despachada</option><option value="entregada">Entregada</option><option value="reagendada">Reagendada</option><option value="cancelada">Cancelada</option></select>
           <input type="text" id="filtroEntTexto" placeholder="Buscar cliente...">
         </div>
         <div id="listaEntregas"></div>
@@ -606,12 +623,29 @@ async function loadData(){
 
   if(insumos.length===0){ insumos = INSUMOS_SUGERIDOS.map(n=>({id:cryptoId(), nombre:n, unidad:'unidades'})); await saveInsumos(); }
 
+  await repararFechasBodega();
+
   applyTheme();
   document.getElementById('loading').style.display='none';
   document.getElementById('content').style.display='block';
   fillConfigForm();
   renderAll();
   if(!window.__realtimeOn){ window.__realtimeOn=true; subscribeRealtime(); }
+}
+/* Corrige bultos de bodega marcados "despachado" cuando su entrega vinculada
+   todavía no está realmente entregada (o viceversa). Se ejecuta solo al cargar. */
+async function repararFechasBodega(){
+  let cambios = false;
+  bodega.forEach(b=>{
+    if(!b.entregaId) return;
+    const ent = entregas.find(e=>e.id===b.entregaId);
+    if(!ent){ b.entregaId=null; b.numeroCita=null; b.fechaSalida=null; cambios=true; return; }
+    const debeEstarDespachado = ent.estado==='despachada' || ent.estado==='entregada';
+    const fechaCorrecta = debeEstarDespachado ? ent.fechaAgendamiento : null;
+    if(b.fechaSalida !== fechaCorrecta){ b.fechaSalida = fechaCorrecta; cambios=true; }
+    if(b.numeroCita !== ent.numeroCita){ b.numeroCita = ent.numeroCita; cambios=true; }
+  });
+  if(cambios) await saveBodega();
 }
 function cryptoId(){ return Date.now()+''+Math.random().toString(36).slice(2,7); }
 async function saveRecepciones(){ if(!(await kvSet('sanpex-recepciones', recepciones))) alert('No se pudo guardar. Revisa tu conexión.'); }
@@ -632,6 +666,7 @@ function calcTramo(bultos, t){ let base = bultos<=3? t.t1 : bultos<=6? t.t2 : t.
 function calcCostos(bultos){ return { felipe: calcTramo(bultos, config.felipe)+config.felipe.peaje, sanorganic: calcTramo(bultos, config.sanorganic) }; }
 function clp(n){ return "$"+Math.round(n).toLocaleString('es-CL'); }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function metaChip(label, value, muted){ return `<span class="meta-chip"><span class="k">${label}</span><span class="v${muted?' muted':''}">${value}</span></span>`; }
 function nextBodCode(){ let max=0; bodega.forEach(b=>{ const m=(b.codigo||'').match(/BOD-(\d+)/); if(m) max=Math.max(max, parseInt(m[1])); }); return 'BOD-'+String(max+1).padStart(4,'0'); }
 function estadoRecepcion(r){ if(r.gd && r.oc) return 'completo'; if(r.gd || r.oc) return 'proceso'; return 'pendiente'; }
 function estadoRecepcionLabel(e){ return e==='completo'?'Completo':e==='proceso'?'En proceso':'Pendiente'; }
@@ -764,6 +799,32 @@ function metaOrigen(r){
   document.getElementById(id).addEventListener('input', renderListaRecepciones);
   document.getElementById(id).addEventListener('change', renderListaRecepciones);
 });
+function recepcionCardHtml(r){
+  const est = estadoRecepcion(r);
+  return `<div class="label-card ${r.origen}">
+      <div class="label-top">
+        <div class="label-cliente">${escapeHtml(r.cliente)}</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <span class="badge ${r.origen}">${ORIGEN_LABEL[r.origen]}</span>
+          <span class="badge ${est}">${estadoRecepcionLabel(est)}</span>
+          ${r.bodegaId ? '<span class="badge en-bodega">En bodega</span>' : ''}
+        </div>
+      </div>
+      <div class="label-meta">
+        ${r.origen==='blue' ? metaChip('N° pedido', escapeHtml(r.blueNumero||'—'), !r.blueNumero) : r.origen==='prov' ? metaChip('Proveedor', escapeHtml(r.provNombre||'—'), !r.provNombre) : metaChip('Origen', escapeHtml(r.otroNombre||'—')+(r.otroRef?' · '+escapeHtml(r.otroRef):''), !r.otroNombre)}
+        ${metaChip('Bultos', r.bultos)}
+        ${metaChip('GD', escapeHtml(r.gd||'—'), !r.gd)}
+        ${metaChip('OC', escapeHtml(r.oc||'—'), !r.oc)}
+        ${metaChip('Recibido', r.fechaRecepcion)}
+      </div>
+      ${r.notas ? `<div class="label-notas">"${escapeHtml(r.notas)}"</div>` : ''}
+      <div class="label-actions">
+        ${!r.bodegaId ? `<button class="btn small outline-blue" style="color:#fff;" onclick="irABodegaDesdeRecepcion('${r.id}')">Ingresar a bodega</button>` : ''}
+        <button class="btn small secondary" onclick="editarRecepcion('${r.id}')">Editar</button>
+        <button class="btn small danger" onclick="borrarRecepcion('${r.id}')">Eliminar</button>
+      </div>
+    </div>`;
+}
 function renderListaRecepciones(){
   const fOrigen=document.getElementById('filtroRecOrigen').value, fEstado=document.getElementById('filtroRecEstado').value;
   const fBodega=document.getElementById('filtroRecBodega').value, fTexto=document.getElementById('filtroRecTexto').value.toLowerCase();
@@ -774,33 +835,22 @@ function renderListaRecepciones(){
     if(fBodega==='si' && !r.bodegaId) return false;
     if(fTexto && !r.cliente.toLowerCase().includes(fTexto)) return false;
     return true;
-  });
+  }).sort((a,b)=> b.fechaRecepcion.localeCompare(a.fechaRecepcion));
   const cont=document.getElementById('listaRecepciones');
   if(filtrados.length===0){ cont.innerHTML='<div class="empty">No hay recepciones que coincidan con estos filtros.</div>'; return; }
-  cont.innerHTML = filtrados.map(r=>{
-    const est = estadoRecepcion(r);
-    return `<div class="label-card ${r.origen}">
-      <div class="label-top">
-        <div class="label-cliente">${escapeHtml(r.cliente)}</div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <span class="badge ${r.origen}">${ORIGEN_LABEL[r.origen]}</span>
-          <span class="badge ${est}">${estadoRecepcionLabel(est)}</span>
-          ${r.bodegaId ? '<span class="badge en-bodega">En bodega</span>' : ''}
-        </div>
-      </div>
-      <div class="label-meta">
-        <span>${metaOrigen(r)}</span>
-        <span>${r.bultos} bulto${r.bultos===1?'':'s'}</span>
-        <span>GD: ${r.gd || '—'}</span>
-        <span>OC: ${r.oc || '—'}</span>
-        <span>Recibido ${r.fechaRecepcion}</span>
-      </div>
-      ${r.notas ? `<div class="label-notas">"${escapeHtml(r.notas)}"</div>` : ''}
-      <div class="label-actions">
-        ${!r.bodegaId ? `<button class="btn small outline-blue" style="color:#fff;" onclick="irABodegaDesdeRecepcion('${r.id}')">Ingresar a bodega</button>` : ''}
-        <button class="btn small secondary" onclick="editarRecepcion('${r.id}')">Editar</button>
-        <button class="btn small danger" onclick="borrarRecepcion('${r.id}')">Eliminar</button>
-      </div>
+
+  const grupos={}, orden=[];
+  filtrados.forEach(r=>{
+    const label = fechaGrupoLabel(r.fechaRecepcion);
+    if(!grupos[label]){ grupos[label]=[]; orden.push(label); }
+    grupos[label].push(r);
+  });
+  cont.innerHTML = orden.map(label=>{
+    const items=grupos[label];
+    const bultos = items.reduce((s,r)=>s+r.bultos,0);
+    return `<div class="date-group">
+      <div class="date-group-header"><span>${label}</span><span class="date-group-count">${items.length} recepción${items.length===1?'':'es'} · ${bultos} bultos</span></div>
+      <div class="date-group-body">${items.map(recepcionCardHtml).join('')}</div>
     </div>`;
   }).join('');
 }
@@ -952,12 +1002,12 @@ function bodegaCardHtml(b){
       </div>
     </div>
     <div class="label-meta">
-      <span>${escapeHtml(b.descripcion||'Sin descripción')}</span>
-      <span>${b.bultos||'—'} bulto${b.bultos===1?'':'s'}</span>
-      <span>GD: ${b.gd || '—'}</span>
-      <span>OC: ${b.oc || '—'}</span>
-      <span>Ingreso ${b.fechaIngreso}</span>
-      <span>${b.fechaSalida ? 'Salida '+b.fechaSalida : (largaEstadia ? `<span class="warn-dias">${dias} días en bodega</span>` : dias+' día'+(dias===1?'':'s'))}</span>
+      ${metaChip('Descripción', escapeHtml(b.descripcion||'—'), !b.descripcion)}
+      ${metaChip('Bultos', b.bultos||'—')}
+      ${metaChip('GD', escapeHtml(b.gd||'—'), !b.gd)}
+      ${metaChip('OC', escapeHtml(b.oc||'—'), !b.oc)}
+      ${metaChip('Ingreso', b.fechaIngreso)}
+      ${b.fechaSalida ? metaChip('Salida', b.fechaSalida) : metaChip('Días', largaEstadia ? `<span class="warn-dias">${dias}</span>` : dias)}
     </div>
     <div class="label-costos"><span>Monto acumulado: <b>${clp(monto)}</b></span></div>
     <div class="label-actions">
@@ -976,16 +1026,20 @@ function renderBodegaLista(){
     return true;
   });
   const activos = filtrados.filter(b=>!b.fechaSalida).sort((a,b2)=> diasEntre(b2.fechaIngreso,todayISO()) - diasEntre(a.fechaIngreso,todayISO()));
+  const bultosActivos = activos.reduce((s,b)=>s+(b.bultos||0),0);
+  document.getElementById('tituloBodegaActivaCount').textContent = activos.length ? `${activos.length} registro${activos.length===1?'':'s'} · ${bultosActivos} bultos` : '';
   document.getElementById('listaBodegaActiva').innerHTML = activos.length ? activos.map(bodegaCardHtml).join('') : '<div class="empty">No hay bultos en bodega actualmente.</div>';
 
   const historial = filtrados.filter(b=>b.fechaSalida);
   const porMes = {};
   historial.forEach(b=>{ const m=mesDeFecha(b.fechaIngreso); if(!porMes[m]) porMes[m]=[]; porMes[m].push(b); });
   const mesesOrdenados = Object.keys(porMes).sort((a,b2)=> new Date(porMes[b2][0].fechaIngreso) - new Date(porMes[a][0].fechaIngreso));
-  document.getElementById('listaBodegaHistorial').innerHTML = mesesOrdenados.length ? mesesOrdenados.map(m=>`
-    <details class="month-group"><summary>${cap(m)} (${porMes[m].length})</summary>
-    <div class="month-body">${porMes[m].map(bodegaCardHtml).join('')}</div></details>
-  `).join('') : '<div class="empty">Aún no hay historial de bodega.</div>';
+  document.getElementById('listaBodegaHistorial').innerHTML = mesesOrdenados.length ? mesesOrdenados.map(m=>{
+    const items = porMes[m];
+    const bultos = items.reduce((s,b)=>s+(b.bultos||0),0);
+    return `<details class="month-group"><summary><span class="mes-nombre">${cap(m)}</span><span class="date-group-count">${items.length} registro${items.length===1?'':'s'} · ${bultos} bultos</span></summary>
+    <div class="month-body">${items.map(bodegaCardHtml).join('')}</div></details>`;
+  }).join('') : '<div class="empty">Aún no hay historial de bodega.</div>';
 }
 
 /* =========================================================
@@ -1088,7 +1142,10 @@ guardedClick(document.getElementById('btnGuardarEnt'), async ()=>{
   else entregas.unshift(ent);
 
   if(selectedEntModo==='bodega'){
-    itemIds.forEach(id=>{ const b=bodega.find(x=>x.id===id); if(b){ b.entregaId=ent.id; b.numeroCita=numeroCita; b.fechaSalida=fechaAgendamiento; } });
+    itemIds.forEach(id=>{
+      const b=bodega.find(x=>x.id===id);
+      if(b){ b.entregaId=ent.id; b.numeroCita=numeroCita; b.fechaSalida = (ent.estado==='despachada' || ent.estado==='entregada') ? fechaAgendamiento : null; }
+    });
     await saveBodega();
   }
   await saveEntregas();
@@ -1098,12 +1155,65 @@ guardedClick(document.getElementById('btnGuardarEnt'), async ()=>{
 });
 document.getElementById('entCancelEdit').addEventListener('click',(e)=>{e.preventDefault(); resetEntForm();});
 
-function badgeEntEstado(estado){ return `<span class="badge ${estado}">${cap(estado)}</span>`; }
+function badgeEntEstado(e){
+  if(e.estado==='agendada' && e.fechaAgendamiento < todayISO()) return '<span class="badge atrasada">Atrasada</span>';
+  return `<span class="badge ${e.estado}">${cap(e.estado)}</span>`;
+}
 function clientesDeEntrega(e){
   if(e.modo==='directa') return e.clienteManual;
   const clientes=[...new Set((e.itemIds||[]).map(id=>{ const b=bodega.find(x=>x.id===id); return b?b.cliente:null; }).filter(Boolean))];
   return clientes.join(', ') || '—';
 }
+const DIAS_CORTOS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+function fechaGrupoLabel(iso){
+  const hoy = todayISO();
+  const mObj = new Date(); mObj.setDate(mObj.getDate()+1);
+  const mananaISO = mObj.toISOString().slice(0,10);
+  const aObj = new Date(); aObj.setDate(aObj.getDate()-1);
+  const ayerISO = aObj.toISOString().slice(0,10);
+  const d = new Date(iso+'T00:00:00');
+  const corta = DIAS_CORTOS[d.getDay()]+' '+pad2(d.getDate())+' '+cap(MESES[d.getMonth()]).slice(0,3);
+  if(iso===hoy) return 'Hoy · '+corta;
+  if(iso===mananaISO) return 'Mañana · '+corta;
+  if(iso===ayerISO) return 'Ayer · '+corta;
+  return corta;
+}
+function entregaCardHtml(e){
+  const estadoClase = (e.estado==='agendada' && e.fechaAgendamiento < todayISO()) ? 'atrasada' : 'estado-'+e.estado;
+  return `<div class="label-card entrega ${estadoClase}">
+      <div class="label-top">
+        <div class="label-cliente">${escapeHtml(clientesDeEntrega(e))}</div>
+        ${badgeEntEstado(e)}
+      </div>
+      <div class="label-meta">
+        ${metaChip('Fecha', e.fechaAgendamiento+' · '+horaFmt(e.horaAgendamiento)+' hrs')}
+        ${metaChip('Cita', escapeHtml(e.numeroCita||'—'), !e.numeroCita)}
+        ${metaChip('Bultos', e.bultosTotal)}
+        ${metaChip('Origen', e.modo==='bodega' ? (e.itemIds||[]).length+' de bodega' : 'Directa')}
+      </div>
+      <div class="label-costos">
+        <span>Felipe: <b>${clp(e.costoFelipe)}</b></span>
+        <span>SAN-ORGANIC: <b>${clp(e.costoSanOrganic)}</b></span>
+        <span>Total: <b>${clp(e.costoFelipe+e.costoSanOrganic)}</b></span>
+      </div>
+      ${e.notas ? `<div class="label-notas">"${escapeHtml(e.notas)}"</div>` : ''}
+      <div class="label-actions">
+        ${(e.estado==='agendada'||e.estado==='reagendada') ? `<button class="btn small outline-blue" style="color:#fff;" onclick="marcarEntregaEntregada('${e.id}')">Marcar entregada</button>` : ''}
+        <button class="btn small secondary" onclick="editarEntrega('${e.id}')">Editar</button>
+        <button class="btn small danger" onclick="borrarEntrega('${e.id}')">Eliminar</button>
+      </div>
+    </div>`;
+}
+window.marcarEntregaEntregada = async function(id){
+  const e = entregas.find(x=>x.id===id); if(!e) return;
+  e.estado='entregada';
+  if(e.modo==='bodega'){
+    (e.itemIds||[]).forEach(bid=>{ const b=bodega.find(x=>x.id===bid); if(b){ b.fechaSalida=e.fechaAgendamiento; b.numeroCita=e.numeroCita; } });
+    await saveBodega();
+  }
+  await saveEntregas();
+  renderAll();
+};
 ['filtroEntEstado','filtroEntTexto'].forEach(id=>{
   document.getElementById(id).addEventListener('input', renderListaEntregas);
   document.getElementById(id).addEventListener('change', renderListaEntregas);
@@ -1117,29 +1227,21 @@ function renderListaEntregas(){
   }).sort((a,b)=> (a.fechaAgendamiento+a.horaAgendamiento).localeCompare(b.fechaAgendamiento+b.horaAgendamiento));
   const cont=document.getElementById('listaEntregas');
   if(filtrados.length===0){ cont.innerHTML='<div class="empty">No hay entregas que coincidan con estos filtros.</div>'; return; }
-  cont.innerHTML = filtrados.map(e=>`
-    <div class="label-card entrega">
-      <div class="label-top">
-        <div class="label-cliente">${escapeHtml(clientesDeEntrega(e))}</div>
-        ${badgeEntEstado(e.estado)}
-      </div>
-      <div class="label-meta">
-        <span>📅 ${e.fechaAgendamiento} · ${horaFmt(e.horaAgendamiento)} hrs</span>
-        <span>Cita N° ${e.numeroCita || '—'}</span>
-        <span>${e.bultosTotal} bulto${e.bultosTotal===1?'':'s'}</span>
-        <span>${e.modo==='bodega' ? (e.itemIds||[]).length+' registro(s) de bodega' : 'Entrega directa'}</span>
-      </div>
-      <div class="label-costos">
-        <span>Felipe: <b>${clp(e.costoFelipe)}</b></span>
-        <span>SAN-ORGANIC: <b>${clp(e.costoSanOrganic)}</b></span>
-        <span>Total: <b>${clp(e.costoFelipe+e.costoSanOrganic)}</b></span>
-      </div>
-      ${e.notas ? `<div class="label-notas">"${escapeHtml(e.notas)}"</div>` : ''}
-      <div class="label-actions">
-        <button class="btn small secondary" onclick="editarEntrega('${e.id}')">Editar</button>
-        <button class="btn small danger" onclick="borrarEntrega('${e.id}')">Eliminar</button>
-      </div>
-    </div>`).join('');
+
+  const grupos={}, orden=[];
+  filtrados.forEach(e=>{
+    const label = fechaGrupoLabel(e.fechaAgendamiento);
+    if(!grupos[label]){ grupos[label]=[]; orden.push(label); }
+    grupos[label].push(e);
+  });
+  cont.innerHTML = orden.map(label=>{
+    const items = grupos[label];
+    const bultos = items.reduce((s,e)=>s+e.bultosTotal,0);
+    return `<div class="date-group">
+      <div class="date-group-header"><span>${label}</span><span class="date-group-count">${items.length} entrega${items.length===1?'':'s'} · ${bultos} bultos</span></div>
+      <div class="date-group-body">${items.map(entregaCardHtml).join('')}</div>
+    </div>`;
+  }).join('');
 }
 window.editarEntrega = function(id){
   const e=entregas.find(x=>x.id===id); if(!e) return;
