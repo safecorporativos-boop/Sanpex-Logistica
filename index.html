@@ -514,22 +514,41 @@
     <!-- EXPORTAR -->
     <div class="panel" id="panel-exportar">
       <div class="card">
-        <h2>Reporte para el gerente de SANPEX</h2>
-        <p class="sub">Muestra solo el monto integral a pagar por entrega y por bodega — sin tramos de tarifa ni desglose Felipe / SAN-ORGANIC.</p>
-        <div class="grid2">
-          <div class="field"><label>Mes a exportar</label><input type="month" id="exportMes"></div>
-          <div class="field"><label>Incluir</label>
-            <select id="exportIncluir"><option value="ambos">Entregas + Bodega</option><option value="entregas">Solo entregas</option><option value="bodega">Solo bodega</option></select>
-          </div>
-        </div>
-        <div class="btn-row"><button class="btn" id="btnExportar">Descargar reporte (CSV)</button></div>
-        <div id="exportPreview" style="margin-top:16px;"></div>
+        <h2>Mes a exportar</h2>
+        <div class="field" style="max-width:220px;"><label>Mes</label><input type="month" id="exportMes"></div>
+      </div>
+
+      <div class="card">
+        <h2>Detalle de despacho (para SANPEX)</h2>
+        <p class="sub">Producto, GD y OC de cada bulto entregado ese mes. Sin cliente ni montos — pensado para compartir con el gerente.</p>
+        <button class="btn" id="btnExportarDespacho">Descargar detalle de despacho (CSV)</button>
+        <div id="despachoPreview" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="lock-note">🔒 Uso interno — contabilidad. No compartir con el gerente de SANPEX.</div>
+        <h2>Reporte de costos</h2>
+        <p class="sub">Cliente(s), bultos, pago a Felipe / SAN-ORGANIC y cargos adicionales de cada entrega.</p>
+        <button class="btn secondary" id="btnExportarCostos">Descargar reporte de costos (CSV)</button>
+        <div id="costosExportPreview" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Reporte de bodega</h2>
+        <p class="sub">Bultos que estuvieron en bodega ese mes: código, cliente, GD, OC y días de estadía.</p>
+        <button class="btn secondary" id="btnExportarBodega">Descargar reporte de bodega (CSV)</button>
+        <div id="bodegaExportPreview" style="margin-top:16px;"></div>
       </div>
 
       <div class="card">
         <h2>Calendario de entregas</h2>
-        <p class="sub">Genera un archivo .ics con fecha, hora (24 hrs), N° de cita y bultos de cada entrega agendada ese mes. Se puede importar a Google Calendar / Apple Calendar y compartir con el gerente de SANPEX.</p>
-        <div class="field" style="max-width:260px;"><label>Mes del calendario</label><input type="month" id="calMes"></div>
+        <p class="sub">Genera un archivo .ics con fecha, hora (24 hrs), N° de cita y bultos. Si ya importaste el mes completo antes, usa <b>"Por día"</b> para agregar solo las entregas nuevas y evitar que se dupliquen al volver a importar.</p>
+        <div class="origen-toggle" style="max-width:340px;">
+          <div class="origen-btn sel-blue" id="calModoMes" data-calmodo="mes">📅 Por mes</div>
+          <div class="origen-btn" id="calModoDia" data-calmodo="dia">📆 Por día</div>
+        </div>
+        <div class="field" id="calMesField" style="max-width:260px;"><label>Mes</label><input type="month" id="calMes"></div>
+        <div class="field" id="calDiaField" style="max-width:260px; display:none;"><label>Día</label><input type="date" id="calDia"></div>
         <div class="btn-row"><button class="btn outline-blue" id="btnExportarICS">Descargar calendario (.ics)</button></div>
       </div>
     </div>
@@ -1582,48 +1601,87 @@ guardedClick(document.getElementById('btnGuardarConfig'), async ()=>{
   renderAll();
 });
 
-/* ---------------- exportar: CSV para gerente ---------------- */
-guardedClick(document.getElementById('btnExportar'), async ()=>{
-  const mesInput = document.getElementById('exportMes').value;
-  const incluir = document.getElementById('exportIncluir').value;
-  if(!mesInput){ alert('Selecciona el mes a exportar.'); return; }
-  const [yy,mm] = mesInput.split('-');
-  const mesLabel = MESES[parseInt(mm)-1] + ' ' + yy;
-  let filas=[], total=0;
-
-  if(incluir==='ambos' || incluir==='entregas'){
-    entregas.filter(e=>e.mes===mesLabel).forEach(e=>{
-      const t=entregaTotalPagar(e); total+=t;
-      filas.push({tipo:'Entrega', ref:'Cita '+(e.numeroCita||'—'), cliente:clientesDeEntrega(e), fecha:e.fechaAgendamiento+' '+horaFmt(e.horaAgendamiento), detalle:entregaBultosTotal(e)+' bulto(s) · '+e.estado+(e.extras&&e.extras.length?' · '+e.extras.map(x=>x.descripcion).join(', '):''), total:t});
-    });
-  }
-  if(incluir==='ambos' || incluir==='bodega'){
-    const inicioMes = yy+'-'+mm+'-01';
-    const finMes = new Date(parseInt(yy), parseInt(mm), 0).toISOString().slice(0,10);
-    const bodegaActivaEseMes = bodega.some(b => b.fechaIngreso <= finMes && (!b.fechaSalida || b.fechaSalida >= inicioMes));
-    if(bodegaActivaEseMes){
-      total += config.bodegaValorMensual;
-      filas.push({tipo:'Bodega', ref:'—', cliente:'—', fecha:mesLabel, detalle:'Valor mensual de bodega (fijo)', total:config.bodegaValorMensual});
-    }
-  }
-  if(filas.length===0){ document.getElementById('exportPreview').innerHTML='<div class="empty">No hay datos para ese mes.</div>'; return; }
-
-  document.getElementById('exportPreview').innerHTML = `
-    <p class="sub">Vista previa — ${filas.length} registro(s), total integral: <b>${clp(total)}</b></p>
-    <div class="table-scroll"><table class="simple"><thead><tr><th>Tipo</th><th>Ref</th><th>Cliente</th><th>Fecha</th><th>Detalle</th><th>Monto</th></tr></thead>
-    <tbody>${filas.map(f=>`<tr><td>${f.tipo}</td><td>${escapeHtml(f.ref)}</td><td>${escapeHtml(f.cliente)}</td><td>${f.fecha}</td><td>${escapeHtml(f.detalle)}</td><td><b>${clp(f.total)}</b></td></tr>`).join('')}
-    <tr><td colspan="5" style="text-align:right; font-weight:600;">TOTAL A PAGAR</td><td><b>${clp(total)}</b></td></tr></tbody></table></div>
-  `;
-  let csv = 'Tipo,Referencia,Cliente,Fecha,Detalle,Monto a pagar\n';
-  filas.forEach(f=>{ csv += `"${f.tipo}","${f.ref}","${f.cliente}","${f.fecha}","${f.detalle}","${Math.round(f.total)}"\n`; });
-  csv += `,,,,"TOTAL A PAGAR","${Math.round(total)}"\n`;
+/* ---------------- helper: genera y descarga un CSV ---------------- */
+function descargarCSV(filas, headers, keys, nombreArchivo, filaTotal){
+  let csv = headers.map(h=>`"${h}"`).join(',')+'\n';
+  filas.forEach(f=>{ csv += keys.map(k=>`"${(f[k]??'').toString().replace(/"/g,'""')}"`).join(',')+'\n'; });
+  if(filaTotal) csv += filaTotal.map(v=>`"${v}"`).join(',')+'\n';
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`SANPEX_reporte_${mesLabel.replace(' ','_')}.csv`;
+  const a=document.createElement('a'); a.href=url; a.download=nombreArchivo;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function mesLabelDe(mesInput){ const [yy,mm]=mesInput.split('-'); return MESES[parseInt(mm)-1]+' '+yy; }
+
+/* ---------------- 1) Detalle de despacho (GD, OC, producto — sin cliente ni montos) ---------------- */
+guardedClick(document.getElementById('btnExportarDespacho'), async ()=>{
+  const mesInput = document.getElementById('exportMes').value;
+  if(!mesInput){ alert('Selecciona el mes a exportar.'); return; }
+  const mesLabel = mesLabelDe(mesInput);
+  let filas = [];
+  entregas.filter(e=>e.mes===mesLabel).sort((a,b)=>(a.fechaAgendamiento+a.horaAgendamiento).localeCompare(b.fechaAgendamiento+b.horaAgendamiento)).forEach(e=>{
+    if(e.modo==='bodega'){
+      (e.itemIds||[]).forEach(id=>{
+        const b = bodega.find(x=>x.id===id);
+        if(!b) return;
+        filas.push({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', codigo:b.codigo, gd:b.gd||'—', oc:b.oc||'—', detalle:b.descripcion||'—', bultos:b.bultos});
+      });
+    } else {
+      filas.push({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', codigo:'—', gd:'—', oc:'—', detalle:e.notas||'Entrega directa', bultos:e.bultosManual||0});
+    }
+  });
+  if(filas.length===0){ document.getElementById('despachoPreview').innerHTML='<div class="empty">No hay entregas para ese mes.</div>'; return; }
+  document.getElementById('despachoPreview').innerHTML = `
+    <p class="sub">Vista previa — ${filas.length} registro(s).</p>
+    <div class="table-scroll"><table class="simple"><thead><tr><th>Fecha</th><th>Hora</th><th>Cita</th><th>Código</th><th>GD</th><th>OC</th><th>Detalle del producto</th><th>Bultos</th></tr></thead>
+    <tbody>${filas.map(f=>`<tr><td>${f.fecha}</td><td>${f.hora}</td><td>${escapeHtml(f.cita)}</td><td>${escapeHtml(f.codigo)}</td><td>${escapeHtml(f.gd)}</td><td>${escapeHtml(f.oc)}</td><td>${escapeHtml(f.detalle)}</td><td>${f.bultos}</td></tr>`).join('')}</tbody></table></div>
+  `;
+  descargarCSV(filas, ['Fecha','Hora','Cita','Código','GD','OC','Detalle del producto','Bultos'], ['fecha','hora','cita','codigo','gd','oc','detalle','bultos'], `SANPEX_despacho_${mesLabel.replace(' ','_')}.csv`);
 });
 
-/* ---------------- exportar: calendario .ics ---------------- */
+/* ---------------- 2) Reporte de costos (uso interno) ---------------- */
+guardedClick(document.getElementById('btnExportarCostos'), async ()=>{
+  const mesInput = document.getElementById('exportMes').value;
+  if(!mesInput){ alert('Selecciona el mes a exportar.'); return; }
+  const mesLabel = mesLabelDe(mesInput);
+  const delMes = entregas.filter(e=>e.mes===mesLabel).sort((a,b)=>(a.fechaAgendamiento+a.horaAgendamiento).localeCompare(b.fechaAgendamiento+b.horaAgendamiento));
+  if(delMes.length===0){ document.getElementById('costosExportPreview').innerHTML='<div class="empty">No hay entregas para ese mes.</div>'; return; }
+  let total=0;
+  const filas = delMes.map(e=>{
+    const c = entregaCostosCalc(e); const extra = extrasTotal(e); const t = c.felipe+c.sanorganic+extra; total+=t;
+    return {fecha:e.fechaAgendamiento, cliente:clientesDeEntrega(e), cita:e.numeroCita||'—', bultos:entregaBultosTotal(e), felipe:Math.round(c.felipe), sanorganic:Math.round(c.sanorganic), adicionales:Math.round(extra), total:Math.round(t)};
+  });
+  document.getElementById('costosExportPreview').innerHTML = `
+    <p class="sub">Vista previa — ${filas.length} registro(s), total del mes: <b>${clp(total)}</b></p>
+    <div class="table-scroll"><table class="simple"><thead><tr><th>Fecha</th><th>Cliente(s)</th><th>Cita</th><th>Bultos</th><th>Felipe</th><th>SAN-ORGANIC</th><th>Adicionales</th><th>Total</th></tr></thead>
+    <tbody>${filas.map(f=>`<tr><td>${f.fecha}</td><td>${escapeHtml(f.cliente)}</td><td>${escapeHtml(f.cita)}</td><td>${f.bultos}</td><td>${clp(f.felipe)}</td><td>${clp(f.sanorganic)}</td><td>${clp(f.adicionales)}</td><td><b>${clp(f.total)}</b></td></tr>`).join('')}
+    <tr><td colspan="7" style="text-align:right; font-weight:600;">TOTAL</td><td><b>${clp(total)}</b></td></tr></tbody></table></div>
+  `;
+  descargarCSV(filas, ['Fecha','Cliente(s)','Cita','Bultos','Felipe','SAN-ORGANIC','Adicionales','Total'], ['fecha','cliente','cita','bultos','felipe','sanorganic','adicionales','total'], `SANPEX_costos_${mesLabel.replace(' ','_')}.csv`, ['','','','','','','TOTAL',Math.round(total)]);
+});
+
+/* ---------------- 3) Reporte de bodega ---------------- */
+guardedClick(document.getElementById('btnExportarBodega'), async ()=>{
+  const mesInput = document.getElementById('exportMes').value;
+  if(!mesInput){ alert('Selecciona el mes a exportar.'); return; }
+  const [yy,mm] = mesInput.split('-');
+  const inicioMes = yy+'-'+mm+'-01';
+  const finMes = new Date(parseInt(yy), parseInt(mm), 0).toISOString().slice(0,10);
+  const delMes = bodega.filter(b => b.fechaIngreso <= finMes && (!b.fechaSalida || b.fechaSalida >= inicioMes));
+  if(delMes.length===0){ document.getElementById('bodegaExportPreview').innerHTML='<div class="empty">No hay bultos en bodega para ese mes.</div>'; return; }
+  const filas = delMes.map(b=>({
+    codigo:b.codigo, cliente:b.cliente, descripcion:b.descripcion||'—', gd:b.gd||'—', oc:b.oc||'—',
+    ingreso:b.fechaIngreso, salida:b.fechaSalida||'En bodega', dias:diasEntre(b.fechaIngreso, b.fechaSalida||todayISO())
+  }));
+  document.getElementById('bodegaExportPreview').innerHTML = `
+    <p class="sub">Vista previa — ${filas.length} registro(s).</p>
+    <div class="table-scroll"><table class="simple"><thead><tr><th>Código</th><th>Cliente</th><th>Descripción</th><th>GD</th><th>OC</th><th>Ingreso</th><th>Salida</th><th>Días</th></tr></thead>
+    <tbody>${filas.map(f=>`<tr><td>${f.codigo}</td><td>${escapeHtml(f.cliente)}</td><td>${escapeHtml(f.descripcion)}</td><td>${escapeHtml(f.gd)}</td><td>${escapeHtml(f.oc)}</td><td>${f.ingreso}</td><td>${f.salida}</td><td>${f.dias}</td></tr>`).join('')}</tbody></table></div>
+  `;
+  descargarCSV(filas, ['Código','Cliente','Descripción','GD','OC','Ingreso','Salida','Días'], ['codigo','cliente','descripcion','gd','oc','ingreso','salida','dias'], `SANPEX_bodega_${mesLabelDe(mesInput).replace(' ','_')}.csv`);
+});
+
+/* ---------------- 4) Calendario .ics (por mes o por día) ---------------- */
 function icsEscape(s){ return (s||'').replace(/([,;])/g,'\\$1'); }
 function toICSDateTime(fecha, hora){ return fecha.replace(/-/g,'') + 'T' + (hora||'09:00').replace(':','') + '00'; }
 function addHourICS(fecha, hora){
@@ -1631,15 +1689,19 @@ function addHourICS(fecha, hora){
   let endH = hh+1; if(endH>23) endH=23;
   return toICSDateTime(fecha, pad2(endH)+':'+pad2(mm));
 }
-guardedClick(document.getElementById('btnExportarICS'), async ()=>{
-  const mesInput = document.getElementById('calMes').value;
-  if(!mesInput){ alert('Selecciona el mes del calendario.'); return; }
-  const [yy,mm] = mesInput.split('-');
-  const delMes = entregas.filter(e=>{ const d=new Date(e.fechaAgendamiento+'T00:00:00'); return (d.getMonth()+1)===parseInt(mm) && d.getFullYear()===parseInt(yy); });
-  if(delMes.length===0){ alert('No hay entregas agendadas para ese mes.'); return; }
-
+let calModo = 'mes';
+document.querySelectorAll('#panel-exportar .origen-toggle .origen-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    calModo = b.dataset.calmodo;
+    document.getElementById('calModoMes').classList.toggle('sel-blue', calModo==='mes');
+    document.getElementById('calModoDia').classList.toggle('sel-blue', calModo==='dia');
+    document.getElementById('calMesField').style.display = calModo==='mes' ? 'block':'none';
+    document.getElementById('calDiaField').style.display = calModo==='dia' ? 'block':'none';
+  });
+});
+function generarICS(lista, nombreArchivo){
   let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//SANPEX//Entregas//ES\r\nCALSCALE:GREGORIAN\r\n';
-  delMes.forEach(e=>{
+  lista.forEach(e=>{
     ics += 'BEGIN:VEVENT\r\n';
     ics += 'UID:'+e.id+'@sanpex-logistica\r\n';
     ics += 'DTSTART:'+toICSDateTime(e.fechaAgendamiento, e.horaAgendamiento)+'\r\n';
@@ -1652,8 +1714,24 @@ guardedClick(document.getElementById('btnExportarICS'), async ()=>{
   ics += 'END:VCALENDAR\r\n';
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`SANPEX_entregas_${mesInput}.ics`;
+  const a=document.createElement('a'); a.href=url; a.download=nombreArchivo;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+guardedClick(document.getElementById('btnExportarICS'), async ()=>{
+  if(calModo==='mes'){
+    const mesInput = document.getElementById('calMes').value;
+    if(!mesInput){ alert('Selecciona el mes del calendario.'); return; }
+    const [yy,mm] = mesInput.split('-');
+    const lista = entregas.filter(e=>{ const d=new Date(e.fechaAgendamiento+'T00:00:00'); return (d.getMonth()+1)===parseInt(mm) && d.getFullYear()===parseInt(yy); });
+    if(lista.length===0){ alert('No hay entregas agendadas para ese mes.'); return; }
+    generarICS(lista, `SANPEX_entregas_${mesInput}.ics`);
+  } else {
+    const diaInput = document.getElementById('calDia').value;
+    if(!diaInput){ alert('Selecciona el día del calendario.'); return; }
+    const lista = entregas.filter(e=>e.fechaAgendamiento===diaInput);
+    if(lista.length===0){ alert('No hay entregas agendadas para ese día.'); return; }
+    generarICS(lista, `SANPEX_entregas_${diaInput}.ics`);
+  }
 });
 
 function renderAll(){
