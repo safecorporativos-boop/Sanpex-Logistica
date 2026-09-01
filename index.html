@@ -520,16 +520,9 @@
 
       <div class="card">
         <h2>Entregas agendadas del mes</h2>
-        <p class="sub">Lista simple de citas del mes: fecha, hora, cantidad de bultos y estado. Para coordinar agenda con el gerente, sin detalle de producto ni montos.</p>
+        <p class="sub">Fecha, hora, N° de cita, estado, y el detalle de cada bulto (producto, GD, OC). Sin cliente ni montos — pensado para compartir con el gerente.</p>
         <button class="btn" id="btnExportarAgendadas">Descargar entregas agendadas (CSV)</button>
         <div id="agendadasPreview" style="margin-top:16px;"></div>
-      </div>
-
-      <div class="card">
-        <h2>Detalle de despacho (producto, GD y OC)</h2>
-        <p class="sub">Una fila por cada bulto entregado ese mes, con su producto, GD y OC. Sin cliente ni montos.</p>
-        <button class="btn" id="btnExportarDespacho">Descargar detalle de despacho (CSV)</button>
-        <div id="despachoPreview" style="margin-top:16px;"></div>
       </div>
 
       <div class="card">
@@ -1620,47 +1613,30 @@ function descargarCSV(filas, headers, keys, nombreArchivo, filaTotal){
 }
 function mesLabelDe(mesInput){ const [yy,mm]=mesInput.split('-'); return MESES[parseInt(mm)-1]+' '+yy; }
 
-/* ---------------- 1) Entregas agendadas del mes (simple: fecha, hora, cita, bultos, estado) ---------------- */
+/* ---------------- 1) Entregas agendadas del mes (fecha, hora, cita, estado, GD, OC, producto) ---------------- */
 guardedClick(document.getElementById('btnExportarAgendadas'), async ()=>{
-  const mesInput = document.getElementById('exportMes').value;
-  if(!mesInput){ alert('Selecciona el mes a exportar.'); return; }
-  const mesLabel = mesLabelDe(mesInput);
-  const filas = entregas.filter(e=>e.mes===mesLabel)
-    .sort((a,b)=>(a.fechaAgendamiento+a.horaAgendamiento).localeCompare(b.fechaAgendamiento+b.horaAgendamiento))
-    .map(e=>({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', bultos:entregaBultosTotal(e), estado:cap(e.estado)}));
-  if(filas.length===0){ document.getElementById('agendadasPreview').innerHTML='<div class="empty">No hay entregas para ese mes.</div>'; return; }
-  document.getElementById('agendadasPreview').innerHTML = `
-    <p class="sub">Vista previa — ${filas.length} entrega(s).</p>
-    <div class="table-scroll"><table class="simple"><thead><tr><th>Fecha</th><th>Hora</th><th>Cita</th><th>Bultos</th><th>Estado</th></tr></thead>
-    <tbody>${filas.map(f=>`<tr><td>${f.fecha}</td><td>${f.hora}</td><td>${escapeHtml(f.cita)}</td><td>${f.bultos}</td><td>${f.estado}</td></tr>`).join('')}</tbody></table></div>
-  `;
-  descargarCSV(filas, ['Fecha','Hora','Cita','Bultos','Estado'], ['fecha','hora','cita','bultos','estado'], `SANPEX_entregas_agendadas_${mesLabel.replace(' ','_')}.csv`);
-});
-
-/* ---------------- 2) Detalle de despacho (GD, OC, producto — sin cliente ni montos) ---------------- */
-guardedClick(document.getElementById('btnExportarDespacho'), async ()=>{
   const mesInput = document.getElementById('exportMes').value;
   if(!mesInput){ alert('Selecciona el mes a exportar.'); return; }
   const mesLabel = mesLabelDe(mesInput);
   let filas = [];
   entregas.filter(e=>e.mes===mesLabel).sort((a,b)=>(a.fechaAgendamiento+a.horaAgendamiento).localeCompare(b.fechaAgendamiento+b.horaAgendamiento)).forEach(e=>{
-    if(e.modo==='bodega'){
-      (e.itemIds||[]).forEach(id=>{
+    if(e.modo==='bodega' && (e.itemIds||[]).length){
+      e.itemIds.forEach(id=>{
         const b = bodega.find(x=>x.id===id);
         if(!b) return;
-        filas.push({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', codigo:b.codigo, gd:b.gd||'—', oc:b.oc||'—', detalle:b.descripcion||'—', bultos:b.bultos});
+        filas.push({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', estado:cap(e.estado), codigo:b.codigo, gd:b.gd||'—', oc:b.oc||'—', detalle:b.descripcion||'—', bultos:b.bultos});
       });
     } else {
-      filas.push({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', codigo:'—', gd:'—', oc:'—', detalle:e.notas||'Entrega directa', bultos:e.bultosManual||0});
+      filas.push({fecha:e.fechaAgendamiento, hora:horaFmt(e.horaAgendamiento), cita:e.numeroCita||'—', estado:cap(e.estado), codigo:'—', gd:'—', oc:'—', detalle:e.notas||'Entrega directa', bultos:e.modo==='directa'?(e.bultosManual||0):entregaBultosTotal(e)});
     }
   });
-  if(filas.length===0){ document.getElementById('despachoPreview').innerHTML='<div class="empty">No hay entregas para ese mes.</div>'; return; }
-  document.getElementById('despachoPreview').innerHTML = `
+  if(filas.length===0){ document.getElementById('agendadasPreview').innerHTML='<div class="empty">No hay entregas para ese mes.</div>'; return; }
+  document.getElementById('agendadasPreview').innerHTML = `
     <p class="sub">Vista previa — ${filas.length} registro(s).</p>
-    <div class="table-scroll"><table class="simple"><thead><tr><th>Fecha</th><th>Hora</th><th>Cita</th><th>Código</th><th>GD</th><th>OC</th><th>Detalle del producto</th><th>Bultos</th></tr></thead>
-    <tbody>${filas.map(f=>`<tr><td>${f.fecha}</td><td>${f.hora}</td><td>${escapeHtml(f.cita)}</td><td>${escapeHtml(f.codigo)}</td><td>${escapeHtml(f.gd)}</td><td>${escapeHtml(f.oc)}</td><td>${escapeHtml(f.detalle)}</td><td>${f.bultos}</td></tr>`).join('')}</tbody></table></div>
+    <div class="table-scroll"><table class="simple"><thead><tr><th>Fecha</th><th>Hora</th><th>Cita</th><th>Estado</th><th>Código</th><th>GD</th><th>OC</th><th>Detalle del producto</th><th>Bultos</th></tr></thead>
+    <tbody>${filas.map(f=>`<tr><td>${f.fecha}</td><td>${f.hora}</td><td>${escapeHtml(f.cita)}</td><td>${f.estado}</td><td>${escapeHtml(f.codigo)}</td><td>${escapeHtml(f.gd)}</td><td>${escapeHtml(f.oc)}</td><td>${escapeHtml(f.detalle)}</td><td>${f.bultos}</td></tr>`).join('')}</tbody></table></div>
   `;
-  descargarCSV(filas, ['Fecha','Hora','Cita','Código','GD','OC','Detalle del producto','Bultos'], ['fecha','hora','cita','codigo','gd','oc','detalle','bultos'], `SANPEX_entregas_reporte_${mesLabel.replace(' ','_')}.csv`);
+  descargarCSV(filas, ['Fecha','Hora','Cita','Estado','Código','GD','OC','Detalle del producto','Bultos'], ['fecha','hora','cita','estado','codigo','gd','oc','detalle','bultos'], `SANPEX_entregas_agendadas_${mesLabel.replace(' ','_')}.csv`);
 });
 
 /* ---------------- 3) Reporte de costos (uso interno) ---------------- */
