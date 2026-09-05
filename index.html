@@ -136,6 +136,8 @@
   .badge.pendiente{background:var(--amber-pale); color:var(--amber);}
   .badge.proceso{background:var(--blue2-pale); color:var(--blue2);}
   .badge.completo{background:var(--success-pale); color:var(--success);}
+  .badge.sindoc{background:var(--amber-pale); color:var(--amber);}
+  .badge.condoc{background:var(--success-pale); color:var(--success);}
   .badge.agendada{background:var(--blue2-pale); color:var(--blue2);}
   .badge.despachada{background:var(--plum-pale); color:var(--plum);}
   .badge.entregada{background:var(--success-pale); color:var(--success);}
@@ -267,7 +269,7 @@
         <div class="card">
           <span class="stage-tag uno">Etapa 1 · Llegada a bodega</span>
           <h2>Registrar recepción</h2>
-          <p class="sub">Cuando el bulto llega: se registra, se saca la GD y se vincula la OC. Luego se pasa a Bodega desde la lista.</p>
+          <p class="sub">Cuando el bulto llega, se registra con los datos del proveedor. El GD/OC interno se ingresa después, al pasarlo a Bodega.</p>
 
           <label>Origen del bulto</label>
           <div class="origen-toggle">
@@ -287,6 +289,9 @@
               <div class="field"><label>Referencia / N° (opcional)</label><input type="text" id="otroRef" placeholder="Ej: CX-99213"></div>
             </div>
           </div>
+          <div class="origen-fields" id="fields-doc-provotro">
+            <div class="field"><label>GD o Factura del proveedor</label><input type="text" id="proveedorDoc" placeholder="El documento que llega físicamente con el bulto"></div>
+          </div>
 
           <div class="grid2">
             <div class="field"><label>Cliente / destinatario final</label><input type="text" id="cliente" list="clientesList" placeholder="Escribe o elige uno ya usado"></div>
@@ -294,10 +299,6 @@
           </div>
           <div class="field"><label>Fecha de recepción en bodega</label><input type="date" id="fechaRecepcion"></div>
 
-          <div class="grid2">
-            <div class="field"><label>N° Guía de Despacho (GD)</label><input type="text" id="gd" placeholder="Se completa al sacar la GD"></div>
-            <div class="field"><label>N° Orden de Compra (OC) vinculada</label><input type="text" id="oc" placeholder="Se completa al vincular la OC"></div>
-          </div>
           <div class="field"><label>Notas</label><textarea id="recNotas" placeholder="Observaciones..."></textarea></div>
 
           <button class="btn" id="btnGuardarRec">Guardar recepción</button>
@@ -308,7 +309,7 @@
       <div class="subpanel" id="sub-rec-lista">
         <div class="filters">
           <select id="filtroRecOrigen"><option value="">Todos los orígenes</option><option value="blue">Blue Express</option><option value="prov">Proveedor directo</option><option value="otro">Otro</option></select>
-          <select id="filtroRecEstado"><option value="">Todos los estados</option><option value="pendiente">Pendiente</option><option value="proceso">En proceso</option><option value="completo">Completo</option></select>
+          <select id="filtroRecEstado"><option value="">Todos los estados</option><option value="condoc">Con documento</option><option value="sindoc">Sin documento</option></select>
           <select id="filtroRecBodega"><option value="">Bodega: todos</option><option value="no">Aún no en bodega</option><option value="si">Ya en bodega</option></select>
           <input type="text" id="filtroRecTexto" placeholder="Buscar cliente...">
         </div>
@@ -326,11 +327,12 @@
       <div class="subpanel active" id="sub-bodega-nuevo">
         <div class="card">
           <h2>Ingresar bulto a bodega</h2>
-          <p class="sub">Se recomienda vincular una recepción para traer GD/OC automáticamente. Se genera un código BOD correlativo.</p>
+          <p class="sub">Se recomienda vincular una recepción para traer cliente y bultos automáticamente. El GD y OC internos se ingresan acá, en Bodega. Se genera un código BOD correlativo.</p>
 
           <div class="field">
             <label>Vincular a una recepción</label>
             <select id="bodRecepcionLink"><option value="">— Registro manual (sin recepción vinculada) —</option></select>
+            <div id="bodDocProveedorNota" style="display:none; margin-top:8px; font-size:12px; color:var(--ink-soft);"></div>
           </div>
 
           <div class="grid2">
@@ -354,7 +356,7 @@
       <div class="subpanel" id="sub-bodega-lista">
         <div class="filters">
           <select id="filtroBodEstado"><option value="">Todos</option><option value="activo">En bodega</option><option value="retirado">Despachado</option></select>
-          <input type="text" id="filtroBodTexto" placeholder="Buscar cliente...">
+          <input type="text" id="filtroBodTexto" placeholder="Buscar por cliente o código BOD...">
         </div>
 
         <div class="section-title"><span>En bodega actualmente</span><span class="date-group-count" id="tituloBodegaActivaCount"></span></div>
@@ -745,8 +747,8 @@ function entregaBultosTotal(e){
 function entregaCostosCalc(e){ return calcCostos(entregaBultosTotal(e)); }
 function entregaTotalPagar(e){ const c=entregaCostosCalc(e); return c.felipe+c.sanorganic+extrasTotal(e); }
 function nextBodCode(){ let max=0; bodega.forEach(b=>{ const m=(b.codigo||'').match(/BOD-(\d+)/); if(m) max=Math.max(max, parseInt(m[1])); }); return 'BOD-'+String(max+1).padStart(4,'0'); }
-function estadoRecepcion(r){ if(r.gd && r.oc) return 'completo'; if(r.gd || r.oc) return 'proceso'; return 'pendiente'; }
-function estadoRecepcionLabel(e){ return e==='completo'?'Completo':e==='proceso'?'En proceso':'Pendiente'; }
+function estadoRecepcion(r){ if(r.origen==='blue') return null; return r.proveedorDoc ? 'condoc' : 'sindoc'; }
+function estadoRecepcionLabel(e){ return e==='condoc' ? 'Con documento' : 'Sin documento'; }
 function pad2(n){ return String(n).padStart(2,'0'); }
 function updateClock(){
   const now = new Date();
@@ -822,6 +824,7 @@ function updateOrigenUI(){
   document.getElementById('fields-blue').classList.toggle('show', selectedOrigen==='blue');
   document.getElementById('fields-prov').classList.toggle('show', selectedOrigen==='prov');
   document.getElementById('fields-otro').classList.toggle('show', selectedOrigen==='otro');
+  document.getElementById('fields-doc-provotro').classList.toggle('show', selectedOrigen==='prov' || selectedOrigen==='otro');
 }
 
 /* =========================================================
@@ -833,7 +836,7 @@ function resetRecForm(){
   document.getElementById('otroNombre').value=''; document.getElementById('otroRef').value='';
   document.getElementById('cliente').value=''; document.getElementById('bultos').value=1;
   document.getElementById('fechaRecepcion').value=todayISO();
-  document.getElementById('gd').value=''; document.getElementById('oc').value='';
+  document.getElementById('proveedorDoc').value='';
   document.getElementById('recNotas').value='';
   editingRecId=null;
   document.getElementById('recEditingNotice').style.display='none';
@@ -855,8 +858,7 @@ guardedClick(document.getElementById('btnGuardarRec'), async ()=>{
     otroRef: document.getElementById('otroRef').value.trim(),
     cliente, bultos, fechaRecepcion,
     mes: mesDeFecha(fechaRecepcion),
-    gd: document.getElementById('gd').value.trim(),
-    oc: document.getElementById('oc').value.trim(),
+    proveedorDoc: document.getElementById('proveedorDoc').value.trim(),
     notas: document.getElementById('recNotas').value.trim(),
     bodegaId: editingRecId ? (recepciones.find(r=>r.id===editingRecId)||{}).bodegaId || null : null
   };
@@ -885,15 +887,14 @@ function recepcionCardHtml(r){
         <div class="label-cliente">${escapeHtml(r.cliente)}</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <span class="badge ${r.origen}">${ORIGEN_LABEL[r.origen]}</span>
-          <span class="badge ${est}">${estadoRecepcionLabel(est)}</span>
+          ${est ? `<span class="badge ${est}">${estadoRecepcionLabel(est)}</span>` : ''}
           ${r.bodegaId ? '<span class="badge en-bodega">En bodega</span>' : ''}
         </div>
       </div>
       <div class="label-meta">
         ${r.origen==='blue' ? metaChip('N° pedido', escapeHtml(r.blueNumero||'—'), !r.blueNumero) : r.origen==='prov' ? metaChip('Proveedor', escapeHtml(r.provNombre||'—'), !r.provNombre) : metaChip('Origen', escapeHtml(r.otroNombre||'—')+(r.otroRef?' · '+escapeHtml(r.otroRef):''), !r.otroNombre)}
         ${metaChip('Bultos', r.bultos)}
-        ${metaChip('GD', escapeHtml(r.gd||'—'), !r.gd)}
-        ${metaChip('OC', escapeHtml(r.oc||'—'), !r.oc)}
+        ${r.origen!=='blue' ? metaChip('Doc. proveedor', escapeHtml(r.proveedorDoc||'—'), !r.proveedorDoc) : ''}
         ${metaChip('Recibido', r.fechaRecepcion)}
       </div>
       ${r.notas ? `<div class="label-notas">"${escapeHtml(r.notas)}"</div>` : ''}
@@ -940,7 +941,7 @@ window.editarRecepcion = function(id){
   document.getElementById('otroNombre').value=r.otroNombre||''; document.getElementById('otroRef').value=r.otroRef||'';
   document.getElementById('cliente').value=r.cliente; document.getElementById('bultos').value=r.bultos;
   document.getElementById('fechaRecepcion').value=r.fechaRecepcion;
-  document.getElementById('gd').value=r.gd||''; document.getElementById('oc').value=r.oc||'';
+  document.getElementById('proveedorDoc').value=r.proveedorDoc||'';
   document.getElementById('recNotas').value=r.notas||'';
   document.getElementById('recEditingNotice').style.display='block';
   document.getElementById('btnGuardarRec').textContent='Actualizar recepción';
@@ -972,19 +973,20 @@ function fillBodRecepcionLink(){
   const prev = sel.value;
   const disponibles = recepciones.filter(r => !r.bodegaId || r.id===currentLinked);
   sel.innerHTML = '<option value="">— Registro manual (sin recepción vinculada) —</option>' +
-    disponibles.map(r=>`<option value="${r.id}">${escapeHtml(r.cliente)} · ${r.bultos} bultos · ${r.fechaRecepcion} · GD ${r.gd||'—'}</option>`).join('');
+    disponibles.map(r=>`<option value="${r.id}">${escapeHtml(r.cliente)} · ${r.bultos} bultos · ${r.fechaRecepcion}${r.proveedorDoc?' · Doc: '+escapeHtml(r.proveedorDoc):''}</option>`).join('');
   sel.value = prev || '';
 }
 document.getElementById('bodRecepcionLink').addEventListener('change', ()=>{
   const id = document.getElementById('bodRecepcionLink').value;
-  if(!id) return;
+  const nota = document.getElementById('bodDocProveedorNota');
+  if(!id){ nota.style.display='none'; return; }
   const r = recepciones.find(x=>x.id===id);
   if(r){
     document.getElementById('bodCliente').value=r.cliente;
     document.getElementById('bodBultos').value=r.bultos;
-    document.getElementById('bodGd').value=r.gd||'';
-    document.getElementById('bodOc').value=r.oc||'';
     document.getElementById('bodFechaIngreso').value=r.fechaRecepcion||todayISO();
+    if(r.proveedorDoc){ nota.textContent='📄 Documento del proveedor (referencia): '+r.proveedorDoc; nota.style.display='block'; }
+    else{ nota.style.display='none'; }
   }
 });
 function resetBodForm(){
@@ -1031,9 +1033,11 @@ guardedClick(document.getElementById('btnGuardarBodega'), async ()=>{
   if(recepcionId){ const r=recepciones.find(x=>x.id===recepcionId); if(r) r.bodegaId=reg.id; }
   await saveRecepciones();
   await saveBodega();
+  const esNuevo = !bodEditingId;
   resetBodForm();
   renderAll();
   document.querySelector('.subtab[data-sub="bodega-lista"]').click();
+  if(esNuevo) alert('Guardado como '+reg.codigo);
 });
 document.getElementById('bodCancelEdit').addEventListener('click',(e)=>{e.preventDefault(); resetBodForm();});
 window.editarBodega = function(id){
@@ -1107,8 +1111,7 @@ function seguimientoCardHtml(b){
     ${rec ? `
       <div class="label-meta">
         ${metaChip('Origen', ORIGEN_LABEL[rec.origen])}
-        ${metaChip('GD', escapeHtml(rec.gd||'—'), !rec.gd)}
-        ${metaChip('OC', escapeHtml(rec.oc||'—'), !rec.oc)}
+        ${rec.origen!=='blue' ? metaChip('Doc. proveedor', escapeHtml(rec.proveedorDoc||'—'), !rec.proveedorDoc) : metaChip('N° pedido', escapeHtml(rec.blueNumero||'—'), !rec.blueNumero)}
         ${metaChip('Recibido', rec.fechaRecepcion)}
       </div>
       <button class="btn small secondary" style="margin-top:8px;" onclick="editarRecepcion('${rec.id}')">Editar recepción</button>
@@ -1157,10 +1160,10 @@ function renderBodegaLista(){
   let filtrados = bodega.filter(b=>{
     if(fEstado==='activo' && b.fechaSalida) return false;
     if(fEstado==='retirado' && !b.fechaSalida) return false;
-    if(fTexto && !b.cliente.toLowerCase().includes(fTexto)) return false;
+    if(fTexto && !b.cliente.toLowerCase().includes(fTexto) && !(b.codigo||'').toLowerCase().includes(fTexto)) return false;
     return true;
   });
-  const activos = filtrados.filter(b=>!b.fechaSalida).sort((a,b2)=> diasEntre(b2.fechaIngreso,todayISO()) - diasEntre(a.fechaIngreso,todayISO()));
+  const activos = filtrados.filter(b=>!b.fechaSalida).sort((a,b2)=> diasEntre(a.fechaIngreso,todayISO()) - diasEntre(b2.fechaIngreso,todayISO()));
   const bultosActivos = activos.reduce((s,b)=>s+(b.bultos||0),0);
   document.getElementById('tituloBodegaActivaCount').textContent = activos.length ? `${activos.length} registro${activos.length===1?'':'s'} · ${bultosActivos} bultos` : '';
   document.getElementById('listaBodegaActiva').innerHTML = activos.length ? activos.map(bodegaCardHtml).join('') : '<div class="empty">No hay bultos en bodega actualmente.</div>';
