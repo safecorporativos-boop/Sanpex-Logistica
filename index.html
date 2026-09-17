@@ -413,11 +413,21 @@
             <div class="field"><label>Hora (24 hrs)</label><input type="time" id="entHora" value="09:00" step="60"></div>
             <div class="field"><label>N° de cita</label><input type="text" id="entNumCita" placeholder="Ej: 1024"></div>
           </div>
+          <div class="field">
+            <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px; cursor:pointer; color:var(--ink);">
+              <input type="checkbox" id="entCostoManual" style="width:18px; height:18px;">
+              🚚 Camioneta externa / caso especial (no sigue la tarifa por bultos)
+            </label>
+          </div>
+          <div id="camposCostoManual" style="display:none;" class="grid2">
+            <div class="field"><label>Valor Felipe (acordado)</label><input type="number" id="entFelipeManual" placeholder="0"></div>
+            <div class="field"><label>Valor SAN-ORGANIC (acordado)</label><input type="number" id="entSanorganicManual" placeholder="0"></div>
+          </div>
           <div class="grid2">
             <div class="field"><label>Estado</label>
               <select id="entEstado"><option value="agendada">Agendada</option><option value="despachada">Despachada</option><option value="entregada">Entregada</option><option value="reagendada">Reagendada</option><option value="cancelada">Cancelada</option></select>
             </div>
-            <div class="field"><label>Costos internos calculados</label>
+            <div class="field"><label id="entCostoPreviewLabel">Costos internos calculados</label>
               <div id="entCostoPreview" style="font-family:'IBM Plex Mono',monospace; font-size:12px; padding:10px 11px; background:var(--green-pale); border-radius:8px; color:var(--green-deep);">—</div>
             </div>
           </div>
@@ -425,6 +435,7 @@
             <label>Cargos adicionales</label>
             <div class="quick-chips">
               <span class="chip" id="chipUrgencia" onclick="toggleUrgencia()">⚡ Entrega urgente (mismo día)</span>
+              <span class="chip" id="chipPeoneta" onclick="togglePeoneta()">🧑‍🤝‍🧑 Peoneta / acompañante</span>
             </div>
             <div class="grid3">
               <div class="field" style="margin-bottom:0;"><input type="text" id="extraDescripcion" placeholder="Otro cargo no presupuestado..."></div>
@@ -600,6 +611,7 @@
           <h3>Cargos adicionales por entrega</h3>
           <p class="config-note">Este valor aparece como acceso rápido al agendar una entrega urgente. Además, en cada entrega puedes agregar cualquier otro cargo que aún no esté en el tarifario (embalaje especial, espera prolongada, manipulación especial, etc.) directamente ahí.</p>
           <div class="field" style="max-width:220px;"><label>Valor entrega urgente (mismo día)</label><input type="number" id="urgenciaValor"></div>
+          <div class="field" style="max-width:220px;"><label>Valor peoneta / acompañante</label><input type="number" id="peonetaValor"></div>
         </div>
         <div class="tarifa-block">
           <h3>Insumos</h3>
@@ -622,7 +634,7 @@ let recepciones = [], entregas = [], bodega = [], insumos = [], movimientos = []
 let config = {
   felipe:{t1:5000, t2:8000, t3:12000, extra:1000, peaje:3000},
   sanorganic:{t1:4000, t2:6500, t3:9500, extra:800},
-  bodegaValorMensual:50000, urgenciaValor:10000, insumoUmbral:5, tema:'claro'
+  bodegaValorMensual:50000, urgenciaValor:10000, peonetaValor:15000, insumoUmbral:5, tema:'claro'
 };
 let selectedOrigen = "blue";
 let selectedEntModo = "bodega";
@@ -744,7 +756,10 @@ function entregaBultosTotal(e){
   if(e.modo==='directa') return e.bultosManual||0;
   return (e.itemIds||[]).reduce((s,id)=>{ const b=bodega.find(x=>x.id===id); return s+(b?b.bultos:0); },0);
 }
-function entregaCostosCalc(e){ return calcCostos(entregaBultosTotal(e)); }
+function entregaCostosCalc(e){
+  if(e.costoManual) return { felipe: e.costoFelipeManual||0, sanorganic: e.costoSanorganicManual||0 };
+  return calcCostos(entregaBultosTotal(e));
+}
 function entregaTotalPagar(e){ const c=entregaCostosCalc(e); return c.felipe+c.sanorganic+extrasTotal(e); }
 function nextBodCode(){ let max=0; bodega.forEach(b=>{ const m=(b.codigo||'').match(/BOD-(\d+)/); if(m) max=Math.max(max, parseInt(m[1])); }); return 'BOD-'+String(max+1).padStart(4,'0'); }
 function estadoRecepcion(r){ if(r.origen==='blue') return null; return r.proveedorDoc ? 'condoc' : 'sindoc'; }
@@ -1225,16 +1240,30 @@ window.updateEntCostoPreview = function(){
   }
   renderExtrasLista();
   const extras = entExtras.reduce((s,x)=>s+(x.monto||0),0);
+  const esManual = document.getElementById('entCostoManual').checked;
+  document.getElementById('camposCostoManual').style.display = esManual ? 'grid' : 'none';
+  document.getElementById('entCostoPreviewLabel').textContent = esManual ? 'Total (valor manual + adicionales)' : 'Costos internos calculados';
+
+  if(esManual){
+    const fManual = parseFloat(document.getElementById('entFelipeManual').value)||0;
+    const sManual = parseFloat(document.getElementById('entSanorganicManual').value)||0;
+    const extrasTxt = extras>0 ? ` · Cargos adicionales ${clp(extras)}` : '';
+    document.getElementById('entCostoPreview').textContent = `Felipe ${clp(fManual)} · SAN-ORGANIC ${clp(sManual)}${extrasTxt} · Total ${clp(fManual+sManual+extras)}`;
+    return;
+  }
   if(bultos<1 && extras===0){ document.getElementById('entCostoPreview').textContent="—"; return; }
   const c = calcCostos(bultos);
   const extrasTxt = extras>0 ? ` · Cargos adicionales ${clp(extras)}` : '';
   document.getElementById('entCostoPreview').textContent = `Felipe ${clp(c.felipe)} · SAN-ORGANIC ${clp(c.sanorganic)}${extrasTxt} · Total ${clp(c.felipe+c.sanorganic+extras)}`;
 };
 document.getElementById('entBultosManual').addEventListener('input', updateEntCostoPreview);
+document.getElementById('entCostoManual').addEventListener('change', updateEntCostoPreview);
+document.getElementById('entFelipeManual').addEventListener('input', updateEntCostoPreview);
+document.getElementById('entSanorganicManual').addEventListener('input', updateEntCostoPreview);
 
 function renderExtrasLista(){
-  const chip = document.getElementById('chipUrgencia');
-  chip.classList.toggle('active', entExtras.some(x=>x.esUrgencia));
+  document.getElementById('chipUrgencia').classList.toggle('active', entExtras.some(x=>x.esUrgencia));
+  document.getElementById('chipPeoneta').classList.toggle('active', entExtras.some(x=>x.esPeoneta));
   const cont = document.getElementById('extrasLista');
   cont.innerHTML = entExtras.map((x,i)=>`
     <div class="extra-row"><span>${escapeHtml(x.descripcion)} — <b>${clp(x.monto)}</b></span><span class="x" onclick="quitarExtra(${i})">✕</span></div>
@@ -1244,6 +1273,12 @@ window.toggleUrgencia = function(){
   const idx = entExtras.findIndex(x=>x.esUrgencia);
   if(idx>-1) entExtras.splice(idx,1);
   else entExtras.push({descripcion:'Entrega urgente (mismo día)', monto:config.urgenciaValor, esUrgencia:true});
+  updateEntCostoPreview();
+};
+window.togglePeoneta = function(){
+  const idx = entExtras.findIndex(x=>x.esPeoneta);
+  if(idx>-1) entExtras.splice(idx,1);
+  else entExtras.push({descripcion:'Peoneta / acompañante', monto:config.peonetaValor, esPeoneta:true});
   updateEntCostoPreview();
 };
 window.quitarExtra = function(i){ entExtras.splice(i,1); updateEntCostoPreview(); };
@@ -1263,6 +1298,8 @@ function resetEntForm(){
   document.getElementById('entFecha').value=todayISO(); document.getElementById('entHora').value='09:00';
   document.getElementById('entNumCita').value=''; document.getElementById('entEstado').value='agendada';
   document.getElementById('entNotas').value='';
+  document.getElementById('entCostoManual').checked=false;
+  document.getElementById('entFelipeManual').value=''; document.getElementById('entSanorganicManual').value='';
   entExtras=[];
   editingEntId=null;
   document.getElementById('entEditingNotice').style.display='none';
@@ -1306,6 +1343,9 @@ guardedClick(document.getElementById('btnGuardarEnt'), async ()=>{
     estado: document.getElementById('entEstado').value,
     notas: document.getElementById('entNotas').value.trim(),
     costoFelipe: costos.felipe, costoSanOrganic: costos.sanorganic, bultosTotal,
+    costoManual: document.getElementById('entCostoManual').checked,
+    costoFelipeManual: parseFloat(document.getElementById('entFelipeManual').value)||0,
+    costoSanorganicManual: parseFloat(document.getElementById('entSanorganicManual').value)||0,
     extras: [...entExtras]
   };
   if(editingEntId){ const idx=entregas.findIndex(e=>e.id===editingEntId); if(idx>-1) entregas[idx]=ent; }
@@ -1430,6 +1470,9 @@ window.editarEntrega = function(id){
   document.getElementById('entFecha').value=e.fechaAgendamiento; document.getElementById('entHora').value=e.horaAgendamiento;
   document.getElementById('entNumCita').value=e.numeroCita||''; document.getElementById('entEstado').value=e.estado;
   document.getElementById('entNotas').value=e.notas||'';
+  document.getElementById('entCostoManual').checked = !!e.costoManual;
+  document.getElementById('entFelipeManual').value = e.costoFelipeManual||'';
+  document.getElementById('entSanorganicManual').value = e.costoSanorganicManual||'';
   entExtras = e.extras ? JSON.parse(JSON.stringify(e.extras)) : [];
   updateEntCostoPreview();
   document.getElementById('entEditingNotice').style.display='block';
@@ -1587,6 +1630,7 @@ function fillConfigForm(){
   document.getElementById('sT3').value=config.sanorganic.t3; document.getElementById('sExtra').value=config.sanorganic.extra;
   document.getElementById('bodTarifa').value=config.bodegaValorMensual;
   document.getElementById('urgenciaValor').value=config.urgenciaValor;
+  document.getElementById('peonetaValor').value=config.peonetaValor;
   document.getElementById('insUmbral').value=config.insumoUmbral;
 }
 guardedClick(document.getElementById('btnGuardarConfig'), async ()=>{
@@ -1596,6 +1640,7 @@ guardedClick(document.getElementById('btnGuardarConfig'), async ()=>{
     sanorganic:{ t1:+document.getElementById('sT1').value||0, t2:+document.getElementById('sT2').value||0, t3:+document.getElementById('sT3').value||0, extra:+document.getElementById('sExtra').value||0 },
     bodegaValorMensual:+document.getElementById('bodTarifa').value||0,
     urgenciaValor:+document.getElementById('urgenciaValor').value||0,
+    peonetaValor:+document.getElementById('peonetaValor').value||0,
     insumoUmbral:+document.getElementById('insUmbral').value||0
   };
   await saveConfigStorage();
