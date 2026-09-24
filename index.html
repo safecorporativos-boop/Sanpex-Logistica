@@ -724,6 +724,9 @@ async function repararFechasBodega(){
     if(!b.entregaId) return;
     const ent = entregas.find(e=>e.id===b.entregaId);
     if(!ent){ b.entregaId=null; b.numeroCita=null; b.fechaSalida=null; cambios=true; return; }
+    if(ent.estado==='cancelada'){
+      b.entregaId=null; b.numeroCita=null; b.fechaSalida=null; cambios=true; return;
+    }
     const debeEstarDespachado = ent.estado==='despachada' || ent.estado==='entregada';
     const fechaCorrecta = debeEstarDespachado ? ent.fechaAgendamiento : null;
     if(b.fechaSalida !== fechaCorrecta){ b.fechaSalida = fechaCorrecta; cambios=true; }
@@ -1352,9 +1355,12 @@ guardedClick(document.getElementById('btnGuardarEnt'), async ()=>{
   else entregas.unshift(ent);
 
   if(selectedEntModo==='bodega'){
+    const cancelada = ent.estado==='cancelada';
     itemIds.forEach(id=>{
       const b=bodega.find(x=>x.id===id);
-      if(b){ b.entregaId=ent.id; b.numeroCita=numeroCita; b.fechaSalida = (ent.estado==='despachada' || ent.estado==='entregada') ? fechaAgendamiento : null; }
+      if(!b) return;
+      if(cancelada){ b.entregaId=null; b.numeroCita=null; b.fechaSalida=null; }
+      else { b.entregaId=ent.id; b.numeroCita=numeroCita; b.fechaSalida = (ent.estado==='despachada' || ent.estado==='entregada') ? fechaAgendamiento : null; }
     });
     await saveBodega();
   }
