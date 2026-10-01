@@ -1079,6 +1079,25 @@ window.retirarBodega = async function(id){
   b.fechaSalida = todayISO(); b.entregaId=null; b.numeroCita=null;
   await saveBodega(); renderAll();
 };
+window.liberarBultoRechazado = async function(id){
+  const b = bodega.find(x=>x.id===id); if(!b || !b.entregaId) return;
+  const ent = entregas.find(e=>e.id===b.entregaId);
+  if(!ent){ b.entregaId=null; b.numeroCita=null; b.fechaSalida=null; await saveBodega(); renderAll(); return; }
+  const resumenCita = ent.numeroCita ? 'Cita '+ent.numeroCita : 'esa entrega';
+  if(!confirm(`Esto va a:\n1) Congelar el monto ya calculado de ${resumenCita} tal como está ahora (no bajará aunque este bulto salga).\n2) Quitar este bulto de esa entrega.\n3) Dejarlo disponible en Bodega para agendarlo en una entrega nueva.\n\n¿Continuar?`)) return;
+  if(!ent.costoManual){
+    const c = entregaCostosCalc(ent);
+    ent.costoManual = true;
+    ent.costoFelipeManual = c.felipe;
+    ent.costoSanorganicManual = c.sanorganic;
+  }
+  ent.itemIds = (ent.itemIds||[]).filter(x=>x!==id);
+  b.entregaId = null; b.numeroCita = null; b.fechaSalida = null;
+  await saveEntregas();
+  await saveBodega();
+  renderAll();
+  alert('Bulto liberado. El monto de '+resumenCita+' quedó congelado en su valor anterior.');
+};
 window.borrarBodega = async function(id){
   if(!confirm('¿Eliminar este registro de bodega?')) return;
   const b = bodega.find(x=>x.id===id);
@@ -1110,6 +1129,7 @@ function bodegaCardHtml(b){
     </div>
     <div class="label-actions">
       ${!b.fechaSalida ? `<button class="btn small secondary" onclick="retirarBodega('${b.id}')">Marcar despachado hoy</button>` : ''}
+      ${(!b.fechaSalida && b.entregaId) ? `<button class="btn small danger" onclick="liberarBultoRechazado('${b.id}')">Liberar (rechazado)</button>` : ''}
       <button class="btn small secondary" onclick="editarBodega('${b.id}')">Editar</button>
       <button class="btn small danger" onclick="borrarBodega('${b.id}')">Eliminar</button>
     </div>
@@ -1153,7 +1173,10 @@ function seguimientoCardHtml(b){
         ${metaChip('Cita', escapeHtml(ent.numeroCita||'—'), !ent.numeroCita)}
         ${metaChip('Estado', cap(ent.estado))}
       </div>
-      <button class="btn small secondary" style="margin-top:8px;" onclick="editarEntrega('${ent.id}')">Editar entrega</button>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn small secondary" onclick="editarEntrega('${ent.id}')">Editar entrega</button>
+        ${!b.fechaSalida ? `<button class="btn small danger" onclick="liberarBultoRechazado('${b.id}')">Liberar (rechazado)</button>` : ''}
+      </div>
     ` : '<div class="empty">Aún no está agendado en ninguna entrega.</div>'}
   </div>`;
 }
