@@ -764,6 +764,11 @@ function entregaCostosCalc(e){
   return calcCostos(entregaBultosTotal(e));
 }
 function entregaTotalPagar(e){ const c=entregaCostosCalc(e); return c.felipe+c.sanorganic+extrasTotal(e); }
+function puedeLiberarBulto(b){
+  if(!b.entregaId) return false;
+  const ent = entregas.find(e=>e.id===b.entregaId);
+  return !ent || ent.estado!=='entregada';
+}
 function nextBodCode(){ let max=0; bodega.forEach(b=>{ const m=(b.codigo||'').match(/BOD-(\d+)/); if(m) max=Math.max(max, parseInt(m[1])); }); return 'BOD-'+String(max+1).padStart(4,'0'); }
 function estadoRecepcion(r){ if(r.origen==='blue') return null; return r.proveedorDoc ? 'condoc' : 'sindoc'; }
 function estadoRecepcionLabel(e){ return e==='condoc' ? 'Con documento' : 'Sin documento'; }
@@ -1129,7 +1134,7 @@ function bodegaCardHtml(b){
     </div>
     <div class="label-actions">
       ${!b.fechaSalida ? `<button class="btn small secondary" onclick="retirarBodega('${b.id}')">Marcar despachado hoy</button>` : ''}
-      ${(!b.fechaSalida && b.entregaId) ? `<button class="btn small danger" onclick="liberarBultoRechazado('${b.id}')">Liberar (rechazado)</button>` : ''}
+      ${puedeLiberarBulto(b) ? `<button class="btn small danger" onclick="liberarBultoRechazado('${b.id}')">Liberar (rechazado)</button>` : ''}
       <button class="btn small secondary" onclick="editarBodega('${b.id}')">Editar</button>
       <button class="btn small danger" onclick="borrarBodega('${b.id}')">Eliminar</button>
     </div>
@@ -1175,7 +1180,7 @@ function seguimientoCardHtml(b){
       </div>
       <div class="btn-row" style="margin-top:8px;">
         <button class="btn small secondary" onclick="editarEntrega('${ent.id}')">Editar entrega</button>
-        ${!b.fechaSalida ? `<button class="btn small danger" onclick="liberarBultoRechazado('${b.id}')">Liberar (rechazado)</button>` : ''}
+        ${puedeLiberarBulto(b) ? `<button class="btn small danger" onclick="liberarBultoRechazado('${b.id}')">Liberar (rechazado)</button>` : ''}
       </div>
     ` : '<div class="empty">Aún no está agendado en ninguna entrega.</div>'}
   </div>`;
